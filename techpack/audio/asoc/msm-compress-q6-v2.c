@@ -69,6 +69,8 @@ int lgesoundmabl_monoenable;
 int lgesoundmabl_lrbalancecontrol;
 int lgesoundmabl_allparam;
 #endif
+#include "lge_dsp_mqa.h"
+
 #if defined(CONFIG_SND_LGE_DTS)
 #include <asoc/lge_dsp_sound_dts.h>
 int lge_dts_param[LGE_DTS_PARAM_MAX];
@@ -223,6 +225,7 @@ struct msm_compr_audio_effects {
 	struct eq_params equalizer;
 	struct soft_volume_params volume;
 	struct query_audio_effect query;
+	struct lgmqa_params lgmqa;
 };
 
 struct snd_dec_ddp {
@@ -4197,6 +4200,14 @@ static int msm_compr_audio_effects_config_put(struct snd_kcontrol *kcontrol,
 						&(audio_effects->volume),
 						values, SOFT_VOLUME_INSTANCE_2);
 		break;
+	case LGMQA_MODULE:
+        pr_info("%s: LGMQA_MODULE \n", __func__);
+                if (msm_audio_effects_is_effmodule_supp_in_top(effects_module,
+                        prtd->audio_client->topology))
+                msm_audio_effects_lgmqa_handler(prtd->audio_client,
+                           &(audio_effects->lgmqa),
+                             values);
+        break;
 	default:
 		pr_err("%s Invalid effects config module\n", __func__);
 		ret = -EINVAL;

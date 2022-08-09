@@ -98,6 +98,11 @@
 #define ES9218P_REG_79                      79
 #define ES9218P_REG_80                      80
 
+#define ES9219C_REG_128                     128
+#define ES9219C_REG_130                     130
+#define ES9219C_REG_131                     131
+#define ES9219C_REG_132                     132
+#define ES9219C_REG_133                     133
 #define ES9219C_REG_135                     135
 #define ES9219C_REG_136                     136
 #define ES9219C_REG_137                     137
