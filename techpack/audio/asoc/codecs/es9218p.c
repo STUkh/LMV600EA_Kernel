@@ -47,7 +47,7 @@
 
 #define     ES9218P_SYSFS               // use this feature only for user debug, not release
 
-//#define     USE_HPAHiQ                  // THD increased by ~2dB and Power Consumption increasded by ~2mA
+#define     USE_HPAHiQ                  // THD increased by ~2dB and Power Consumption increasded by ~2mA
 //#define   ES9218P_DEBUG               // ESS pop-click debugging, define to enable step by step override sequence debug messages and time delays.  Use to pinpoint pop-click.
 #define     WORKAROUND_FOR_CORNER_SAMPLES     // set ResetB high two times and send a cmd of soft reset
 #define     ENABLE_DOP_AUTO_MUTE
@@ -424,7 +424,7 @@ static u8  aux_DRE_off_threshold[2] = {0xf5, 0x2d};
 static u8  aux_DRE_decay_rate = 0x0a;
 #endif// DRE_ENABLE
 
-//#define X_TALK_ENHANCEMENT_ENABLE //1121
+#define X_TALK_ENHANCEMENT_ENABLE //1121
 #ifdef X_TALK_ENHANCEMENT_ENABLE
 static int es9219c_crosstalk_enhancement( void );
 static u8  crosstalk_scale_ch1[2] = {0x03, 0x0d};
@@ -532,6 +532,13 @@ struct es9218_regmap {
     { "73_REGISTER",                       ES9218P_REG_73, 0 }, //73_RAM_COEFFEICIENT_READBACK_3
     { "74_REGISTER",                       ES9218P_REG_74, 0 }, //74_RAM_COEFFEICIENT_READBACK_2
     { "75_REGISTER",                       ES9218P_REG_75, 0 }, //75_RAM_COEFFEICIENT_READBACK_1
+    { "76_REGISTER",                       ES9218P_REG_76, 0 }, //76_DRE_STATUS
+    { "77_REGISTER",                       ES9218P_REG_77, 0 }, //77_READ_LOCK_STATUS (MQA, PLL, ASRC)
+    { "128_REGISTER",                      ES9219C_REG_128, 1 }, //128_CROSSTALK_COMPENSATION
+    { "130_REGISTER",                      ES9219C_REG_130, 1 }, //130_CROSSTALK_SCALE_CH1
+    { "131_REGISTER",                      ES9219C_REG_131, 1 }, //131_CROSSTALK_SCALE_CH1
+    { "132_REGISTER",                      ES9219C_REG_132, 1 }, //132_CROSSTALK_SCALE_CH2
+    { "133_REGISTER",                      ES9219C_REG_133, 1 }, //133_CROSSTALK_SCALE_CH2
     { "135_REGISTER",                      ES9219C_REG_135, 1 }, //135_ANALOG_CONTROL_OVERIDES
     { "136_REGISTER",                      ES9219C_REG_136, 1 }, //136_DRE_CONFIG
     { "137_REGISTER",                      ES9219C_REG_137, 1 }, //137_DRE_GAIN_CH1
@@ -543,6 +550,7 @@ struct es9218_regmap {
     { "143_REGISTER",                      ES9219C_REG_143, 1 }, //143_DRE_OFF_THRESHOLD
     { "144_REGISTER",                      ES9219C_REG_144, 1 }, //144_DRE_OFF_THRESHOLD
     { "145_REGISTER",                      ES9219C_REG_145, 1 }, //145_DRE_DECAY_RATE
+    { "146_REGISTER",                      ES9219C_REG_146, 1 }, //146_MQA_CONFIG
     { "192_REGISTER",                      ES9219C_REG_192, 1 }, //192_SOFT_RESET
     { "193_REGISTER",                      ES9219C_REG_193, 1 }, //193_PLL_CONFIG1
     { "194_REGISTER",                      ES9219C_REG_194, 1 }, //194_PLL_CONFIG2
@@ -2507,6 +2515,10 @@ static void es9218p_initialize_registers(unsigned int ess_mode)
             }
         }
     }
+
+    if (g_es9218_priv->es9218_data->is_es9219c) { // for ES9219c
+        es9218_write_reg(g_es9218_priv->i2c_client, ES9219C_REG_146, 0x80); //MQA
+    }
 }
 static void es9218_sabre_hifi_in_standby_work(struct work_struct *work)
 {
@@ -3129,7 +3141,23 @@ static int es9218_clk_source_put(struct snd_kcontrol *kcontrol,
     return 0;
 }
 
+static int es9219_read_lock_status_get(struct snd_kcontrol *kcontrol,
+        struct snd_ctl_elem_value *ucontrol)
+{
+    u8 reg = 0;
+    reg = es9218_read_reg(g_es9218_priv->i2c_client, ES9218P_REG_77);
+    pr_info("READ LOCK STATUS is 0x%X\n", reg);
 
+    return 0;
+}
+
+static int es9219_read_lock_status_put(struct snd_kcontrol *kcontrol,
+        struct snd_ctl_elem_value *ucontrol)
+{
+    pr_debug("%s():ucontrol = %d, read lock state set is unavailable\n", __func__, ucontrol->value.enumerated.item[0]);
+
+    return 0;
+}
 
 static void es9218_chip_revision_get(void)
 {
@@ -3578,6 +3606,9 @@ static struct snd_kcontrol_new es9218_digital_ext_snd_controls[] = {
     SOC_SINGLE_EXT("Es9219 CLK_SOURCE", SND_SOC_NOPM, 0, 1, 0,
                     es9218_clk_source_get,
                     es9218_clk_source_put),
+    SOC_SINGLE_EXT("Es9219 READ LOCK Status", SND_SOC_NOPM, 0, 128, 0,
+                    es9219_read_lock_status_get,
+                    es9219_read_lock_status_put),
     SOC_SINGLE_MULTI_EXT("Es9218 NORMAL_HARMONIC LEFT", SND_SOC_NOPM, 0, 256,
                     0, 4, NULL, es9218_normal_harmonic_comp_put_left),
     SOC_SINGLE_MULTI_EXT("Es9218 ADVANCE_HARMONIC LEFT", SND_SOC_NOPM, 0, 256,

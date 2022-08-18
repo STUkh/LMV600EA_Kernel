@@ -58,7 +58,7 @@
 /* decoder parameter length */
 #define DDP_DEC_MAX_NUM_PARAM		18
 
-#if defined(CONFIG_SND_LGE_MABL) || defined(CONFIG_SND_LGE_DTS) || defined(CONFIG_SND_LGE_AIS)
+#if defined(CONFIG_SND_LGE_MABL) || defined(CONFIG_SND_LGE_DTS) || defined(CONFIG_SND_LGE_AIS) ||  defined(CONFIG_SND_LGE_MQA)
 int lgesound_current_be_id = MSM_FRONTEND_DAI_MULTIMEDIA4;
 #endif
 
@@ -69,6 +69,12 @@ int lgesoundmabl_monoenable;
 int lgesoundmabl_lrbalancecontrol;
 int lgesoundmabl_allparam;
 #endif
+
+#if defined(CONFIG_SND_LGE_MQA)
+#include <asoc/lge_dsp_sound_mqa.h>
+int lge_mqa_param[LGE_MQA_PARAM_MAX];
+#endif
+
 #if defined(CONFIG_SND_LGE_DTS)
 #include <asoc/lge_dsp_sound_dts.h>
 int lge_dts_param[LGE_DTS_PARAM_MAX];
@@ -3538,7 +3544,7 @@ static int msm_compr_volume_get(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-#if defined(CONFIG_SND_LGE_MABL) || defined(CONFIG_SND_LGE_DTS) || defined(CONFIG_SND_LGE_AIS)
+#if defined(CONFIG_SND_LGE_MABL) || defined(CONFIG_SND_LGE_DTS) || defined(CONFIG_SND_LGE_AIS) || defined(CONFIG_SND_LGE_MQA)
 static int lge_dsp_sound_offload_playback_number_put(struct snd_kcontrol *kcontrol,
                                  struct snd_ctl_elem_value *ucontrol)
 {
@@ -3761,6 +3767,84 @@ static const struct snd_kcontrol_new msm_compr_lge_effect_controls[] = {
                         0, 1, 0,
                         lge_dsp_sound_mabl_allparam_get,
                         lge_dsp_sound_mabl_allparam_put),
+};
+#endif
+
+#if defined(CONFIG_SND_LGE_MQA)
+static int lge_dsp_sound_mqa_param_put(struct snd_kcontrol *kcontrol,
+                                 struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *comp = snd_kcontrol_chip(kcontrol);
+	struct msm_compr_pdata *pdata = (struct msm_compr_pdata *)
+										snd_soc_component_get_drvdata(comp);
+	struct snd_compr_stream *cstream = pdata->cstream[lgesound_current_be_id];
+	struct msm_compr_audio *prtd = NULL;
+	int rc;
+	int param_id = (int)ucontrol->value.integer.value[0];
+	int val = (int)ucontrol->value.integer.value[1];
+
+	if (param_id < 0 || param_id >= LGE_MQA_PARAM_MAX) {
+		pr_err("%s: [MQA] param_id %d is not valid \n", __func__, param_id);
+		return -EINVAL;
+	}
+
+	lge_mqa_param[(int)ucontrol->value.integer.value[0]] = (int)ucontrol->value.integer.value[1];
+
+	if (!cstream || cstream->runtime == NULL) {
+		pr_err("%s: [MQA] compress stream is not open status, so ignore this cmd  %d, %d \n", __func__, param_id, val );
+		return -EINVAL;
+	}
+	else {
+		prtd = cstream->runtime->private_data;
+	}
+
+	pr_info("+++++++++++++++++++++++++++++++++++++\n");
+	pr_info("%s: [MQA] param_id %d value %d\n", __func__, (int)ucontrol->value.integer.value[0], (int)ucontrol->value.integer.value[1]);
+	pr_info("+++++++++++++++++++++++++++++++++++++\n");
+
+	if (prtd && prtd->audio_client) {
+		rc = q6asm_set_lge_mqa_param(prtd->audio_client, param_id, val);
+		if (rc < 0) {
+			pr_err("%s: apr command failed rc=%d\n",
+					__func__, rc);
+		}
+	}
+
+	return 0;
+}
+
+static int lge_dsp_sound_mqa_param_get(struct snd_kcontrol *kcontrol,
+                                 struct snd_ctl_elem_value *ucontrol)
+{
+        return 0;
+}
+
+static const struct snd_kcontrol_new msm_compr_lge_mqa_controls[] = {
+		SOC_SINGLE_MULTI_EXT("LGMQA_ENABLE",
+						MSM_FRONTEND_DAI_MULTIMEDIA4,
+						0, 1, 0, 2,
+						lge_dsp_sound_mqa_param_get,
+						lge_dsp_sound_mqa_param_put),
+		SOC_SINGLE_MULTI_EXT("LGMQA_POWERMODE",
+						MSM_FRONTEND_DAI_MULTIMEDIA4,
+						0, 1, 0, 2,
+						lge_dsp_sound_mqa_param_get,
+						lge_dsp_sound_mqa_param_put),
+		SOC_SINGLE_MULTI_EXT("LGMQA_MULTIPLERATE",
+						MSM_FRONTEND_DAI_MULTIMEDIA4,
+						0, 1, 0, 2,
+						lge_dsp_sound_mqa_param_get,
+						lge_dsp_sound_mqa_param_put),
+		SOC_SINGLE_MULTI_EXT("LGMQA_OUTPUTMODE",
+						MSM_FRONTEND_DAI_MULTIMEDIA4,
+						0, 1, 0, 2,
+						lge_dsp_sound_mqa_param_get,
+						lge_dsp_sound_mqa_param_put),
+		SOC_SINGLE_MULTI_EXT("LGMQA_PROPERTIES",
+						MSM_FRONTEND_DAI_MULTIMEDIA4,
+						0, 1, 0, 2,
+						lge_dsp_sound_mqa_param_get,
+						lge_dsp_sound_mqa_param_put),
 };
 #endif
 
@@ -4886,13 +4970,17 @@ static int msm_compr_probe(struct snd_soc_component *component)
 	snd_soc_add_component_controls(component, msm_compr_gapless_controls,
 				      ARRAY_SIZE(msm_compr_gapless_controls));
 
-#if defined(CONFIG_SND_LGE_MABL) || defined(CONFIG_SND_LGE_DTS) || defined(CONFIG_SND_LGE_AIS)
+#if defined(CONFIG_SND_LGE_MABL) || defined(CONFIG_SND_LGE_DTS) || defined(CONFIG_SND_LGE_AIS) || defined(CONFIG_SND_LGE_MQA)
         snd_soc_add_component_controls(component, msm_compr_playback_lge_controls,
                                       ARRAY_SIZE(msm_compr_playback_lge_controls));
 #endif
 #if defined(CONFIG_SND_LGE_MABL)
         snd_soc_add_component_controls(component, msm_compr_lge_effect_controls,
                                       ARRAY_SIZE(msm_compr_lge_effect_controls));
+#endif
+#if defined(CONFIG_SND_LGE_MQA)
+        snd_soc_add_component_controls(component, msm_compr_lge_mqa_controls,
+                                      ARRAY_SIZE(msm_compr_lge_mqa_controls));
 #endif
 #if defined(CONFIG_SND_LGE_DTS)
         snd_soc_add_component_controls(component, msm_compr_lge_dts_controls,
