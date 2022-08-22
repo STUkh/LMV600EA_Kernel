@@ -185,7 +185,7 @@ struct es9218_reg   es9218_PCM_init_register[] = {
 	{ ES9218P_REG_04,		 0x00 },	// Automute Time
 #endif /* ENABLE_DOP_AUTO_MUTE */
 	{ ES9218P_REG_06,        0x43 },    // DoP and Volmue Ramp Rate - 0x42 DoP disabled
-	{ ES9218P_REG_10,        0x02 },    // Master Mode and Sync Configuration - 0x02 : Slave mode
+	{ ES9218P_REG_10,        0x82 },    // Master Mode and Sync Configuration - 0x82 : Master mode enable
 //will be upadated    { ES9218P_REG_15,        0x00 },    // Volume Control - not used
 //will be upadated    { ES9218P_REG_16,        0x00 },    // Volume Control - not used
     { ES9218P_REG_29,        0x00 },    // General Confguration - Max. M/2-0x05, M/4-0x06, M/8-0x07 , //es9218p 0x06 , es9219 0x00
@@ -2434,7 +2434,7 @@ static int es9218p_set_bit_width(unsigned int bit_width, unsigned int ess_mode)
 {
     int ret = -1;
     u8  i2c_len_reg = 0;
-    u8  in_cfg_reg = 0;
+    u8  in_cfg_reg = 0x0e;
 
     if( ess_mode == ESS_MODE_PCM ) {
         /*  Bit width(depth) Per Sec. Setting     */
