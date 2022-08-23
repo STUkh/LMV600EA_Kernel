@@ -306,7 +306,11 @@ dtc-tmp = $(subst $(comma),_,$(dot-target).dts.tmp)
 # mkdtimg
 #----------------------------------------------------------------------------
 quiet_cmd_mkdtimg = DTBOIMG $@
-cmd_mkdtimg = $(srctree)/scripts/mkdtimg create $@ --page_size=4096 $(filter-out FORCE,$^)
+if [[ $(uname -m) == "arm64" || $(uname -m) == "aarch64" ]]; then
+	cmd_mkdtimg = $(srctree)/scripts/mkdtimg_arm64 create $@ --page_size=4096 $(filter-out FORCE,$^)
+else
+	cmd_mkdtimg = $(srctree)/scripts/mkdtimg create $@ --page_size=4096 $(filter-out FORCE,$^)
+fi
 
 # cat
 # ---------------------------------------------------------------------------
