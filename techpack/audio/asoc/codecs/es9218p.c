@@ -185,7 +185,7 @@ struct es9218_reg   es9218_PCM_init_register[] = {
 	{ ES9218P_REG_04,		 0x00 },	// Automute Time
 #endif /* ENABLE_DOP_AUTO_MUTE */
 	{ ES9218P_REG_06,        0x43 },    // DoP and Volmue Ramp Rate - 0x42 DoP disabled
-	{ ES9218P_REG_10,        0x82 },    // Master Mode and Sync Configuration - 0x82 : Master mode enable
+	{ ES9218P_REG_10,        0x02 },    // Master Mode and Sync Configuration - 0x02 : Slave mode
 //will be upadated    { ES9218P_REG_15,        0x00 },    // Volume Control - not used
 //will be upadated    { ES9218P_REG_16,        0x00 },    // Volume Control - not used
     { ES9218P_REG_29,        0x00 },    // General Confguration - Max. M/2-0x05, M/4-0x06, M/8-0x07 , //es9218p 0x06 , es9219 0x00
@@ -442,14 +442,16 @@ enum {
 int g_ess_rev = ESS_B;
 
 
-#define ES9218_RATES (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_11025 |  \
-        SNDRV_PCM_RATE_16000 | SNDRV_PCM_RATE_22050 |   \
-        SNDRV_PCM_RATE_32000 | SNDRV_PCM_RATE_48000 |   \
-        SNDRV_PCM_RATE_96000 | SNDRV_PCM_RATE_192000 | SNDRV_PCM_RATE_176400 | SNDRV_PCM_RATE_384000 ) //|SNDRV_PCM_RATE_352800  TODO for dop128
+#define ES9218_RATES (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_11025 | \
+        SNDRV_PCM_RATE_16000 | SNDRV_PCM_RATE_22050 | SNDRV_PCM_RATE_32000 | \
+        SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 | \
+        SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000 | \
+        SNDRV_PCM_RATE_176400 | SNDRV_PCM_RATE_192000 | \
+        SNDRV_PCM_RATE_352800 | SNDRV_PCM_RATE_384000 ) //|SNDRV_PCM_RATE_352800  TODO for dop128
 
 #define ES9218_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S16_BE | \
         SNDRV_PCM_FMTBIT_S20_3LE | SNDRV_PCM_FMTBIT_S20_3BE | \
-        SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S24_BE | \
+        SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S24_BE | SNDRV_PCM_FMTBIT_S24_3LE | \
         SNDRV_PCM_FMTBIT_S32_LE | SNDRV_PCM_FMTBIT_S32_BE)
 
 
@@ -2784,6 +2786,31 @@ static int es9218_auto_mute_put(struct snd_kcontrol *kcontrol,
     }
     return ret;
 }
+
+static int es9218_sabre_reinit_get(struct snd_kcontrol *kcontrol,
+        struct snd_ctl_elem_value *ucontrol)
+{
+    return 0;
+}
+
+static int es9218_sabre_reinit_put(struct snd_kcontrol *kcontrol,
+        struct snd_ctl_elem_value *ucontrol)
+{
+    int ret = 0;
+
+    g_sabre_cf_num = (int)ucontrol->value.integer.value[0];
+
+    ret = (int)ucontrol->value.integer.value[0];
+
+    if (ret == 0) {
+        return ret;
+    } else {
+        es9218p_sabre_amp_start(g_es9218_priv->i2c_client, g_headset_type);
+    }
+
+    return ret;
+}
+
 #ifdef CONFIG_SND_SOC_LGE_ESS_DIGITAL_FILTER
 static int lge_ess_digital_filter_setting_get(struct snd_kcontrol *kcontrol,
         struct snd_ctl_elem_value *ucontrol)
@@ -2802,8 +2829,6 @@ static int lge_ess_digital_filter_setting_put(struct snd_kcontrol *kcontrol,
     pr_info("%s():filter num= %d\n", __func__, g_sabre_cf_num);
     return ret;
 }
-
-
 
 
 static int get_fade_count_define(void)
@@ -3603,6 +3628,9 @@ static struct snd_kcontrol_new es9218_digital_ext_snd_controls[] = {
     SOC_SINGLE_EXT("Es9218 Bypass", SND_SOC_NOPM, 0, 1, 0,
                     es9218_sabre_wcdon2bypass_get,
                     es9218_sabre_wcdon2bypass_put),
+    SOC_SINGLE_EXT("Es9218 REINIT", SND_SOC_NOPM, 0, 1, 0,
+                    es9218_sabre_reinit_get,
+                    es9218_sabre_reinit_put),
     SOC_SINGLE_EXT("Es9219 CLK_SOURCE", SND_SOC_NOPM, 0, 1, 0,
                     es9218_clk_source_get,
                     es9218_clk_source_put),
